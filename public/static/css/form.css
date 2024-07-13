@@ -1,0 +1,123 @@
+.form-container {
+  display: grid;
+  place-content: center;
+  margin: auto;
+  margin-top: 4rem;
+  margin-bottom: 4rem;
+  max-width: 480px;
+  background-color: white;
+  padding: 1.5rem;
+  box-shadow: var(--shadow-lg);
+  border-radius: 10px;
+}
+
+.form-container.auth {
+  max-width: 407px;
+}
+
+.form-title {
+  font-weight: 600;
+  font-size: 1.5rem;
+}
+
+.form-description {
+  margin-top: 5px;
+  margin-bottom: 30px;
+  font-size: 0.975rem;
+  color: var(--gray-500);
+}
+
+textarea {
+  max-width: 100%;
+}
+
+.form-group {
+  margin-bottom: 25px;
+  width: 100%;
+}
+
+label {
+  display: block;
+  font-size: 0.975rem;
+  font-weight: 500;
+  line-height: 1;
+  color: var(--gray-700);
+  margin-bottom: 5px;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"],
+textarea {
+  width: 100%;
+  max-width: 100%;
+  padding: 10px;
+  border: 1px solid #000;
+  border-radius: 5px;
+  color: var(--gray-800);
+}
+
+select {
+  width: 100%;
+  max-width: 100%;
+  padding: 10px;
+  border: 1px solid #000;
+  border-radius: 5px;
+  color: var(--gray-800);
+  font-size: 1rem;
+}
+
+input::placeholder {
+  color: #9ca3af;
+}
+
+input:focus-visible {
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+}
+
+.error-container {
+  min-height: 1.2rem;
+  padding: 0.09rem;
+}
+
+.error-msg {
+  font-size: 0.85rem;
+  color: var(--red-500);
+}
+
+.action-btn {
+  width: 100%;
+}
+
+.message {
+  margin-top: 20px;
+  text-align: center;
+  font-size: 0.9rem;
+  color: var(--gray-500);
+}
+
+.message a {
+  color: var(--blue-500);
+  text-decoration: underline;
+}
+
+.alert-container {
+  margin-bottom: 1.5rem;
+}
+
+.delete-btn {
+  margin-top: 50px;
+  width: 100%;
+}
+
+.remember-me {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+input[type="checkbox"] {
+  accent-color: var(--gray-800);
+  width: 14px;
+  height: 14px;
+}
