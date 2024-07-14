@@ -48,3 +48,16 @@ CREATE TABLE
         data TEXT NOT NULL,
         last_access TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     );
+
+ALTER TABLE issues
+ADD COLUMN is_deleted TINYINT (1) DEFAULT 0;
+
+CREATE TABLE
+    IF NOT EXISTS issue_deletion_logs (
+        id SERIAL PRIMARY KEY,
+        issue_id BIGINT UNSIGNED NOT NULL,
+        deleted_by BIGINT UNSIGNED NOT NULL,
+        deleted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT fk_issue_id FOREIGN Key (issue_id) REFERENCES issues (id) ON DELETE CASCADE,
+        CONSTRAINT fk_deleted_by FOREIGN KEY (deleted_by) REFERENCES users (id) ON DELETE CASCADE
+    );
