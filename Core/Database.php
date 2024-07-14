@@ -78,4 +78,29 @@ class Database
         $dsnParams = http_build_query($config, arg_separator: ';');
         return "{$driver}:{$dsnParams}";
     }
+
+    /**
+     * Handles a database transaction.
+     *
+     * Begins a transaction, executes the provided transactional function, and commits the transaction.
+     * If an exception occurs, rolls back the transaction and optionally handles the error using the provided error handler.
+     *
+     * @param callable $transactionalFunction The function to execute within the transaction. This function should accept the current instance as its parameter.
+     * @param callable|null $errorHandler An optional function to handle any \PDOException that occurs. This function should accept the exception as its parameter.
+     *
+     * @return void
+     *
+     * @throws \PDOException If an error occurs during the transaction and no error handler is provided.
+     */
+    public function transaction(callable $transactionalFunction, ?callable $errorHandler = null)
+    {
+        try {
+            $this->pdo->beginTransaction();
+            $transactionalFunction($this);
+            $this->pdo->commit();
+        } catch (\PDOException $ex) {
+            $this->pdo->rollBack();
+            is_callable($errorHandler) ?  $errorHandler($ex) : throw $ex;
+        }
+    }
 }
