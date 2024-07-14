@@ -23,7 +23,13 @@
 
 <body>
 
-    <?php require view('/components/navbar') ?>
+
+    <?php
+
+    use Core\Http\Session;
+
+    if (Session::getFlash('flash_message') !== null)  require view('/components/banner');
+    require view('/components/navbar') ?>
 
     <main>
         <?php
