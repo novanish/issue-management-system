@@ -211,9 +211,10 @@ class IssueService
             FROM issues as i
             LEFT JOIN users as u 
             ON i.assignee_id = u.id
-            WHERE reporter_id = :id 
+            WHERE is_deleted = 0
+                AND (reporter_id = :id 
                 OR assignee_id = :id
-                OR :role = 'ADMIN'
+                OR :role = 'ADMIN')
             ORDER BY assignee_id IS NULL $assigneeOrder,
                 FIELD(status, "OPEN", "IN_PROGRESS", "RESOLVED") $statusOrder,
                 FIELD(priority, "HIGH", "MEDIUM", "LOW") $priorityOrder
@@ -251,14 +252,25 @@ class IssueService
      */
     public function deleteIssue(int | string $issueId): void
     {
-        $query = <<<SQL
-            DELETE FROM issues
-            WHERE id = :issueId
-        SQL;
-
         $this
             ->db
-            ->query($query, compact('issueId'));
+            ->transaction(function ($db) use ($issueId) {
+                $updateQuery = <<<SQL
+                    UPDATE issues
+                    SET is_deleted = 1
+                    WHERE id = :issueId
+                SQL;
+
+                $db->query($updateQuery, compact('issueId'));
+
+                $insertQuery = <<<SQL
+                    INSERT INTO issue_deletion_logs (issue_id, deleted_by)
+                    VALUES (:issueId, :userId)
+                SQL;
+
+                $user = Session::get('user');
+                $db->query($insertQuery, ['issueId' => $issueId, 'userId' => $user['id']]);
+            });
     }
 
     /**
