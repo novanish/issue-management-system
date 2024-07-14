@@ -190,3 +190,45 @@ body {
     transform: rotate(360deg);
   }
 }
+.banner {
+  position: absolute;
+  top: 20px;
+  left: 25%;
+  z-index: 50;
+  width: 50%;
+  min-width: 300px;
+  padding: 0.75rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-sizing: border-box;
+  transition: transform 0.3s ease-out;
+  transform: translateY(0);
+}
+
+.banner.success {
+  background-color: #4caf50; /* Green background */
+  color: #fff; /* White text */
+}
+
+.banner.error {
+  background-color: #f44336;
+  color: #fff;
+}
+
+.message {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.close-button {
+  color: inherit;
+  background-color: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.close-button:hover {
+  background-color: rgba(0, 0, 0, 0.1);
+}
