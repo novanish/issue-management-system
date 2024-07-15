@@ -40,6 +40,8 @@
         <a href="/issues/create" class="primary-btn">Create Issue</a>
     </div>
 
+    <?php require view('/components/issues-table/filter-form') ?>
+
     <div id="issues">
         <?php require view('/components/issues-table/table') ?>
     </div>
