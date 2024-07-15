@@ -19,7 +19,7 @@ A PHP-based web application for reporting, tracking, and managing issues efficie
 2. **Navigate to the project directory:**
 
     ```bash
-    cd issue-tracker-system
+    cd issue-management-system
     ```
 
 3. **Set up the database:**
@@ -41,7 +41,7 @@ A PHP-based web application for reporting, tracking, and managing issues efficie
 - **Log in**: Use your credentials to log in.
 - **Report an Issue**: Navigate to the 'Report Issue' section and fill out the required details.
 - **Track Issues**: View all reported issues, their statuses, and other details.
-- **Manage Users**: Admins can manage user roles and permissions.
+
 
 ## Contributing
 
