@@ -230,11 +230,11 @@ function createPageLinks(int $page)
  * @param string $order The sort order.
  * @return string The URL for sorting.
  */
-function createSortLink(string $by, string $order)
+function createSortLink(string $orderBy, string $order)
 {
-    $order = strtoupper(Request::getQueryParameter($by, $order));
+    $order = strtoupper(Request::getQueryParameter('order', $order));
     $order = $order === 'ASC' ? 'DESC' : 'ASC';
-    $queryParams = mergeQueryParametes(Request::getQueryParameter(), [$by => $order]);
+    $queryParams = mergeQueryParametes(Request::getQueryParameter(), compact('orderBy', 'order'));
     return Request::getCurrentPath() . '?' . $queryParams;
 }
 
