@@ -120,9 +120,10 @@ class IssueService
         $query = <<<SQL
             SELECT COUNT(*) AS count
             FROM issues
-            WHERE assignee_id = :id
+            WHERE is_deleted = 0
+                AND (assignee_id = :id
                 OR reporter_id = :id
-                OR "ADMIN" = :role
+                OR "ADMIN" = :role)
         SQL;
 
         $user = Session::get('user');
@@ -154,7 +155,7 @@ class IssueService
                 ON i.assignee_id = u1.id
             LEFT JOIN users AS u2
                 ON i.reporter_id = u2.id
-            WHERE i.id = :id
+            WHERE i.id = :id AND is_deleted = 0
         SQL;
 
         $issue = $this
@@ -181,9 +182,10 @@ class IssueService
                 SUM(priority = 'MEDIUM') AS mediumPriorityIssuesCount,
                 SUM(priority = 'LOW') AS lowPriorityIssuesCount
             FROM issues
-            WHERE reporter_id = :id
+            WHERE is_deleted = 0
+                AND (reporter_id = :id
                 OR assignee_id = :id
-                OR :role = 'ADMIN'  
+                OR :role = 'ADMIN')  
         SQL;
 
         $user = Session::get('user');
@@ -196,17 +198,14 @@ class IssueService
         return array_map(fn ($v) => is_null($v) ? 0 : $v, $stats);
     }
 
-    /**
-     * Retrieves all issues within a specified range.
-     *
-     * @param int $offset The offset for pagination.
-     * @param int $limit The maximum number of issues to retrieve.
-     * @return array An array containing issues within the specified range.
-     */
-    public function getAllIssues(int $offset, int $limit, array $orders): array
+
+    private function createGetAllIssueQuery(array $options): string
     {
-        extract($orders);
-        $query = <<<SQL
+        $orderBy = $options['orderBy'] ?? 'created_at';
+        $order = strtolower($options['order'] ?? 'desc') === 'desc' ? 'DESC' : 'ASC';
+
+        $query =
+            <<<SQL
             SELECT i.*, u.name as assignee
             FROM issues as i
             LEFT JOIN users as u 
@@ -214,19 +213,47 @@ class IssueService
             WHERE is_deleted = 0
                 AND (reporter_id = :id 
                 OR assignee_id = :id
-                OR :role = 'ADMIN')
-            ORDER BY assignee_id IS NULL $assigneeOrder,
-                FIELD(status, "OPEN", "IN_PROGRESS", "RESOLVED") $statusOrder,
-                FIELD(priority, "HIGH", "MEDIUM", "LOW") $priorityOrder
-            LIMIT :limit OFFSET :offset
+                OR :role = 'ADMIN')  
         SQL;
+
+
+        $query .= 'ORDER BY ';
+        switch ($orderBy) {
+            case 'status':
+                $query .= "FIELD(status, 'OPEN', 'IN_PROGRESS', 'RESOLVED') $order";
+                break;
+            case 'priority':
+                $query .= "FIELD(priority, 'HIGH', 'MEDIUM', 'LOW') $order";
+                break;
+            case 'assignee':
+                $query .= "assignee IS NULL $order";
+                break;
+            default:
+                $query .= "created_at $order";
+        }
+
+        $query .= " LIMIT :limit OFFSET :offset";
+
+        return $query;
+    }
+
+    /**
+     * Retrieves all issues within a specified range.
+     *
+     * @param int $offset The offset for pagination.
+     * @param int $limit The maximum number of issues to retrieve.
+     * @return array An array containing issues within the specified range.
+     */
+    public function getAllIssues(array $options): array
+    {
+        $query = $this->createGetAllIssueQuery($options);
 
         $user = Session::get('user');
         $params = [
             "id" => $user['id'],
             'role' => $user['role'],
-            "limit" => $limit,
-            "offset" => $offset,
+            "limit" => $options['limit'],
+            "offset" => $options['offset'],
         ];
         $types = [
             "limit" => PDO::PARAM_INT,
