@@ -61,3 +61,6 @@ CREATE TABLE
         CONSTRAINT fk_issue_id FOREIGN Key (issue_id) REFERENCES issues (id) ON DELETE CASCADE,
         CONSTRAINT fk_deleted_by FOREIGN KEY (deleted_by) REFERENCES users (id) ON DELETE CASCADE
     );
+
+ALTER TABLE issue_deletion_logs
+RENAME COLUMN id TO log_id;
