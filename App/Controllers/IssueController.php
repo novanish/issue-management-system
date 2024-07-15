@@ -39,11 +39,8 @@ class IssueController extends \Core\Controller
      */
     private function getIssuesData()
     {
-        $orderOptions = [
-            "statusOrder" => Request::getQueryParameter('status', 'ASC') === 'ASC' ? 'ASC' : 'DESC',
-            "priorityOrder" => Request::getQueryParameter('priority', 'ASC') === 'ASC' ? 'ASC' : 'DESC',
-            "assigneeOrder" => Request::getQueryParameter('assignee', 'DESC') === 'DESC' ? 'DESC' : 'ASC',
-        ];
+        $orderBy = Request::getQueryParameter('orderBy');
+        $order = Request::getQueryParameter('order');
 
         $currentPage = Request::getQueryParameter('p');
         $currentPage = (int)$currentPage ?: 1;
@@ -51,7 +48,9 @@ class IssueController extends \Core\Controller
         $totalPages = (int) ceil($issueCount / self::ISSUE_PER_PAGE);
         $currentPage = (int)min(max($currentPage, 1), $totalPages);
         $offset = ($currentPage - 1) * self::ISSUE_PER_PAGE;
-        $issues = $this->issueService->getAllIssues($offset, self::ISSUE_PER_PAGE, $orderOptions);
+        $limit = self::ISSUE_PER_PAGE;
+        $options = compact('orderBy', 'order', 'offset', 'limit');
+        $issues = $this->issueService->getAllIssues($options);
         $pages = generatePagination($totalPages, $currentPage);
 
         return compact('issues', 'pages', 'currentPage', 'totalPages');
@@ -74,7 +73,6 @@ class IssueController extends \Core\Controller
         $isPartial = Request::getQueryParameter('partial', 'false') === 'true';
 
         if ($isPartial) {
-            sleep(5);
             $this->partialIssuesView();
             return;
         }
@@ -245,8 +243,9 @@ class IssueController extends \Core\Controller
             && $issue['status'] !== IssueStatus::RESOLVED ?
             IssueStatus::getAllExcept() : IssueStatus::getAll();
         $issuePriorities = IssuePriority::getAll();
+        $isIssueDeletable = $this->isIssueDeletable($issue);
 
-        $data = compact('isAdmin', 'isReporter', 'isAssignee', 'users', 'issueStatuses', 'issuePriorities', 'issue');
+        $data = compact('isAdmin', 'isReporter', 'isAssignee', 'users', 'issueStatuses', 'issuePriorities', 'issue', 'isIssueDeletable');
 
         $this
             ->setPageTitle('Edit Issue - ' . $issue['title'])
@@ -280,6 +279,17 @@ class IssueController extends \Core\Controller
         Router::redirectTo('/issues');
     }
 
+    private function isIssueDeletable(array $issue): bool
+    {
+        $isIssueInProgess = $issue['status'] === IssueStatus::IN_PROGRESS;
+        $isIssueAssigned = isset($issue['assignee_id']);
+        if ($isIssueInProgess || $isIssueAssigned)
+            return false;
+
+        return true;
+    }
+
+
     /**
      * Handles the delete issue action.
      *
@@ -294,10 +304,13 @@ class IssueController extends \Core\Controller
     {
         $issueId = Router::getRouteParams('issueId');
         $user = Session::get('user');
+        $issue = $this->issueService->getIssueById($issueId);
+        if (!$issue) return Router::redirectTo('/issues');
 
-        if ($user['role'] === 'ADMIN') {
-            $this->issueService->deleteIssue($issueId);
-        }
+        if (!$this->isIssueDeletable($issue))
+            return Router::redirectTo('/issues');
+
+        $this->issueService->deleteIssue($issueId);
 
         Router::redirectTo('/issues');
     }
