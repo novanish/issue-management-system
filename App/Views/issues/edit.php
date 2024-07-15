@@ -71,7 +71,7 @@ use Core\Http\Session;
         <button name="<?= Request::ACTION_NAME ?>" value="PUT" class="primary-btn action-btn">Update Issue</button>
     </form>
 
-    <?php if ($isAdmin) : ?>
+    <?php if ($isIssueDeletable) : ?>
         <form action="/issues/delete/<?= $issue['id'] ?>" method="POST">
             <?= csrf() ?>
             <button name="<?= Request::ACTION_NAME ?>" value="DELETE" class="danger-btn delete-btn">Delete Issue</button>
