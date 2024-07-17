@@ -5,7 +5,7 @@ use Constants\IssueStatus;
 use Core\Http\Request;
 ?>
 
-<form method="GET" class="form-grid">
+<form method="GET" class="form-grid" id="filter-form">
     <div class="form-group full-width">
         <label for="search">Search</label>
         <input name="search" id="search" class="input-field" placeholder="Search by issue title or assignee name" value="<?= Request::getQueryParameter('search', '') ?>" />
