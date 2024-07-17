@@ -10,6 +10,18 @@ use Constants\{IssueStatus, IssuePriority};
 use Config\AppConfig;
 use Core\Database;
 
+function getRandomDate()
+{
+    $startDate = strtotime('-1 year');
+    $endDate = time();
+
+    $randomTimestamp = rand($startDate, $endDate);
+
+    $randomDate = date('Y-m-d', $randomTimestamp);
+
+    return $randomDate;
+}
+
 // Instantiate the Database class
 $database = new Database(AppConfig::DB_DRIVER, AppConfig::DB_CONFIG, AppConfig::DB_CREDENTIALS);
 
@@ -110,8 +122,8 @@ function seedIssues(Database $database)
         $status = !$assignee_id ? IssueStatus::OPEN : (IssueStatus::getAllExcept(IssueStatus::RESOLVED))[rand(0, count(IssueStatus::getAllExcept(IssueStatus::RESOLVED)) - 1)];
         $priority = $i === 0 || $i === 1 ? IssuePriority::HIGH : (IssuePriority::getAll())[rand(0, count(IssuePriority::getAll()) - 1)];
         $reporter_id = $usersId[rand(0, $usersCount - 1)];
-        $issue = [$title, $description, $status, $priority, $assignee_id, $reporter_id];
-        $queryString = "INSERT INTO issues (title, description, status, priority, assignee_id, reporter_id) VALUES (?, ?, ?, ?, ?, ?)";
+        $issue = [$title, $description, $status, $priority, $assignee_id, $reporter_id, getRandomDate()];
+        $queryString = "INSERT INTO issues (title, description, status, priority, assignee_id, reporter_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)";
         $database->query($queryString, $issue);
     }
 }
