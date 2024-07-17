@@ -80,11 +80,20 @@ class Request
      *
      * @return mixed|array|null The query parameter value if a key is provided and found, an array of all query parameters if no key is provided, or null if the query parameters are not available.
      */
-    public static function getQueryParameter(?string $parameterName = null, ?string $default = null): array|string|null
+    public static function getQueryParameter(string|array $parameterName = null, ?string $default = null): array|string|null
     {
+        if (is_array($parameterName)) {
+            return array_reduce($parameterName, function ($acc, $k) {
+                $acc[$k] = isset($_GET[$k]) ?  sanitize($_GET[$k]) : null;
+
+                return $acc;
+            }, []);
+        }
+
         if ($parameterName !== null) {
             return isset($_GET[$parameterName]) ? sanitize($_GET[$parameterName]) : $default;
         }
+
 
         return sanitize($_GET);
     }
