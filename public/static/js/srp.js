@@ -10,6 +10,13 @@ function fetchPartials(url, onSucess) {
   xhr.send();
 }
 
+function fetchIssues(path) {
+  const url = new URL(path, window.location.origin);
+  url.searchParams.set("partial", "true");
+  fetchPartials(url.toString(), onSucess);
+  window.history.replaceState(null, "", path);
+}
+
 const issuesEl = document.querySelector("#issues");
 document.addEventListener("click", (event) => {
   const target = event.target;
@@ -20,12 +27,7 @@ document.addEventListener("click", (event) => {
   if (!path) return;
 
   event.preventDefault();
-  const url = new URL(path, window.location.origin);
-  url.searchParams.set("partial", "true");
-
-  fetchPartials(url.toString(), onSucess, onLoading);
-
-  window.history.replaceState(null, "", path);
+  fetchIssues(path);
 });
 
 function onSucess(partial) {
@@ -33,4 +35,32 @@ function onSucess(partial) {
 
   if (window.formatDate) formatDate();
   if (window.removeAllElementClasses) removeAllElementClasses();
+}
+
+const form = document.querySelector("#filter-form");
+
+form.addEventListener(
+  "input",
+  debounce(() => {
+    const formData = new FormData(form);
+    const searchParams = new URLSearchParams();
+
+    for (const [key, value] of formData.entries()) {
+      if (value) searchParams.set(key, value);
+    }
+
+    const path = window.location.pathname + "?" + searchParams.toString();
+    fetchIssues(path);
+  })
+);
+
+function debounce(fn, ms = 600) {
+  let timeoutId = null;
+
+  return (...args) => {
+    if (timeoutId) clearTimeout(id);
+    id = setTimeout(() => {
+      fn(...args);
+    }, ms);
+  };
 }
