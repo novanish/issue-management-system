@@ -7,6 +7,7 @@ use Core\Database;
 use Core\Http\Session;
 use Core\ValidationHandler;
 use Core\Validators\StringValidator;
+use DateTime;
 use PDO;
 
 /**
@@ -115,19 +116,20 @@ class IssueService
      *
      * @return int The count of issues.
      */
-    public function getIssueCount(): int
+    public function getIssueCount(array $options): int
     {
         $query = <<<SQL
             SELECT COUNT(*) AS count
-            FROM issues
-            WHERE is_deleted = 0
-                AND (assignee_id = :id
-                OR reporter_id = :id
-                OR "ADMIN" = :role)
+            FROM issues as i
+            LEFT JOIN users as u 
+            ON i.assignee_id = u.id
         SQL;
 
+        $query .= $this->getWhereClauseForIssues($options);
+        $paramsAndTypes = $this->prepareQueryParameters($options);
+
         $user = Session::get('user');
-        $params = ["id" => $user['id'], 'role' => $user['role']];
+        $params = ["id" => $user['id'], 'role' => $user['role'], ...$paramsAndTypes['params']];
 
         return (int) $this
             ->db
@@ -199,6 +201,59 @@ class IssueService
     }
 
 
+    /**
+     * Construct the WHERE clause for the issues query based on the provided options.
+     *
+     * This function generates the WHERE clause for the SQL query to retrieve issues.
+     * It includes conditions for filtering based on deletion status, user roles, search keywords,
+     * issue status, priority, and date range.
+     *
+     * @param array $options An associative array of options to customize the WHERE clause.
+     * @return string The constructed WHERE clause string.
+     */
+    private function getWhereClauseForIssues(array $options)
+    {
+        $where = ['is_deleted = 0', "(reporter_id = :id OR assignee_id = :id OR :role = 'ADMIN')"];
+
+        if ($options['search']) {
+            $where[] = '(LOWER(title) LIKE :keyword OR LOWER(u.name) LIKE :keyword)';
+        }
+
+        if (in_array(strtoupper($options['status']), IssueStatus::getAll())) {
+            $where[] = 'status = :status';
+        }
+
+        if (in_array(strtoupper($options['priority']), IssuePriority::getAll())) {
+            $where[] = 'priority = :priority';
+        }
+
+        $startDate = DateTime::createFromFormat('Y-m-d', $options['start']);
+        $endDate = DateTime::createFromFormat('Y-m-d', $options['end']);
+
+        if ($startDate && $endDate) {
+            $where[] = 'i.created_at BETWEEN :start AND :end';
+        } elseif ($startDate) {
+            $where[] = 'i.created_at >= :start';
+        } elseif ($endDate) {
+            $where[] = 'i.created_at <= :end';
+        }
+
+        return ' WHERE ' . implode(' AND ', $where);
+    }
+
+    /**
+     * Create the SQL query to retrieve all issues with specified options.
+     *
+     * This function constructs an SQL query to retrieve all issues from the database,
+     * allowing for optional filtering, ordering, and pagination. The results can be
+     * ordered by creation date, status, priority, or assignee.
+     *
+     * @param array $options An associative array of options to customize the query.
+     *                       Supported keys:
+     *                       - 'orderBy': The column to order by (default is 'created_at').
+     *                       - 'order': The order direction ('asc' or 'desc', default is 'desc').
+     * @return string The constructed SQL query string.
+     */
     private function createGetAllIssueQuery(array $options): string
     {
         $orderBy = $options['orderBy'] ?? 'created_at';
@@ -210,14 +265,11 @@ class IssueService
             FROM issues as i
             LEFT JOIN users as u 
             ON i.assignee_id = u.id
-            WHERE is_deleted = 0
-                AND (reporter_id = :id 
-                OR assignee_id = :id
-                OR :role = 'ADMIN')  
         SQL;
 
+        $query .= $this->getWhereClauseForIssues($options);
 
-        $query .= 'ORDER BY ';
+        $query .= ' ORDER BY ';
         switch ($orderBy) {
             case 'status':
                 $query .= "FIELD(status, 'OPEN', 'IN_PROGRESS', 'RESOLVED') $order";
@@ -238,6 +290,52 @@ class IssueService
     }
 
     /**
+     * Prepares parameters and types for a SQL query.
+     *
+     * @param array $options The options containing query parameters.
+     * @return array An array containing 'params' and 'types' for PDO binding.
+     */
+    private function prepareQueryParameters(array $options): array
+    {
+        $params = [];
+        $types = [];
+
+        if ($options['search']) {
+            $params['keyword'] = '%' . strtolower($options['search']) . '%';
+            $types['keyword'] = PDO::PARAM_STR;
+        }
+
+        if (in_array(strtoupper($options['status']), IssueStatus::getAll())) {
+            $params['status'] = $options['status'];
+            $types['status'] = PDO::PARAM_STR;
+        }
+
+        if (in_array(strtoupper($options['priority']), IssuePriority::getAll())) {
+            $params['priority'] = $options['priority'];
+            $types['priority'] = PDO::PARAM_STR;
+        }
+
+        $startDate = DateTime::createFromFormat('Y-m-d', $options['start']);
+        $endDate = DateTime::createFromFormat('Y-m-d', $options['end']);
+
+        if ($startDate) {
+            $params['start'] = $startDate->format('Y-m-d');
+            $types['start'] = PDO::PARAM_STR;
+        }
+
+        if ($endDate) {
+            $params['end'] = $endDate->format('Y-m-d');
+            $types['end'] = PDO::PARAM_STR;
+        }
+
+        return [
+            'params' => $params,
+            'types' => $types,
+        ];
+    }
+
+
+    /**
      * Retrieves all issues within a specified range.
      *
      * @param int $offset The offset for pagination.
@@ -247,6 +345,7 @@ class IssueService
     public function getAllIssues(array $options): array
     {
         $query = $this->createGetAllIssueQuery($options);
+        $paramsAndTypes = $this->prepareQueryParameters($options);
 
         $user = Session::get('user');
         $params = [
@@ -254,13 +353,16 @@ class IssueService
             'role' => $user['role'],
             "limit" => $options['limit'],
             "offset" => $options['offset'],
+            ...$paramsAndTypes['params']
         ];
         $types = [
             "limit" => PDO::PARAM_INT,
             "offset" => PDO::PARAM_INT,
             "id" => PDO::PARAM_INT,
-            "role" => PDO::PARAM_STR
+            "role" => PDO::PARAM_STR,
+            ...$paramsAndTypes['types']
         ];
+
 
         $issues = $this
             ->db
@@ -407,5 +509,69 @@ class IssueService
         $query = rtrim($query, ',') . ' WHERE id = :issueId';
 
         $this->db->query($query, $params);
+    }
+
+    /**
+     * Get the logs of deleted issues.
+     *
+     * This function retrieves information about deleted issues from the database.
+     * It includes details such as the reporter, assignee, who deleted the issue,
+     * and other issue-related information.
+     *
+     * @return array The list of deleted issue logs.
+     */
+    public function getDeletedIssueLogs()
+    {
+        $query = <<<SQL
+            SELECT cu.name AS `Reporter Name`,
+                au.name AS `Assignee Name`,
+                u.name AS `Deleted By`,
+                i.title AS `Issue Title`,
+                i.description AS `Issue Description`,
+                i.status AS `Issue Status`,
+                i.priority AS `Issue Priority`
+            FROM issue_deletion_logs AS idl
+            JOIN issues AS i
+            ON idl.issue_id = i.id
+            JOIN users as u
+            ON idl.deleted_by = u.id
+            LEFT JOIN users AS au
+            ON i.assignee_id = au.id 
+            LEFT JOIN users AS cu
+            ON i.reporter_id = cu.id 
+        SQL;
+
+        return $this
+            ->db
+            ->query($query)
+            ->fetchAll();
+    }
+
+    /**
+     * Write data to a CSV file.
+     *
+     * This function writes an array of data to a CSV file. It includes the headers
+     * as the first row of the CSV file. The file is created or overwritten if it
+     * already exists.
+     *
+     * @param string $fileName The name of the CSV file to write to.
+     * @param array $data The data to write to the CSV file.
+     * @return void
+     */
+    public function writeToCSVFile(string $fileName, array $data)
+    {
+        $file = fopen($fileName, 'w');
+        $isHeaderSet = false;
+
+        foreach ($data as $row) {
+            if (!$isHeaderSet) {
+                fputcsv($file, array_keys($row));
+                $header = true;
+            }
+
+            fputcsv($file, array_values($row));
+        }
+
+        fclose($file);
     }
 }
