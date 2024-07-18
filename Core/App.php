@@ -49,6 +49,8 @@ class App
         Router::put('/issues/edit/:issueId', AppControllers\IssueController::class . "@editIssue");
         Router::delete('/issues/delete/:issueId', AppControllers\IssueController::class . "@deleteIssue");
 
+        Router::get('/issues/delete-logs/download', AppControllers\IssueController::class . "@downloadDeleteLog");
+
         Router::get('*', AppControllers\ErrorsController::class . "@notFound");
     }
 
