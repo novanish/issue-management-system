@@ -37,6 +37,9 @@
 
     <div style="display: flex; justify-content: space-between;">
         <h2 class="title">Issues</h2>
+        <?php if ($isAdmin) : ?>
+            <a href="/issues/delete-logs/download" class="primary-btn">Export Delete logs to csv</a>
+        <?php endif; ?>
         <a href="/issues/create" class="primary-btn">Create Issue</a>
     </div>
 
