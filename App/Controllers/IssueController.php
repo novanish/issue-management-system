@@ -39,21 +39,31 @@ class IssueController extends \Core\Controller
      */
     private function getIssuesData()
     {
-        $orderBy = Request::getQueryParameter('orderBy');
-        $order = Request::getQueryParameter('order');
+        $options = Request::getQueryParameter([
+            'orderBy',
+            'order',
+            'search',
+            'end',
+            'start',
+            'status',
+            'priority'
+        ]);
 
         $currentPage = Request::getQueryParameter('p');
         $currentPage = (int)$currentPage ?: 1;
-        $issueCount = $this->issueService->getIssueCount();
+        $issueCount = $this->issueService->getIssueCount($options);
         $totalPages = (int) ceil($issueCount / self::ISSUE_PER_PAGE);
         $currentPage = (int)min(max($currentPage, 1), $totalPages);
-        $offset = ($currentPage - 1) * self::ISSUE_PER_PAGE;
+        $offset = $totalPages === 0 ? 0 : ($currentPage - 1) * self::ISSUE_PER_PAGE;
         $limit = self::ISSUE_PER_PAGE;
-        $options = compact('orderBy', 'order', 'offset', 'limit');
-        $issues = $this->issueService->getAllIssues($options);
+
+        $issues = $this->issueService->getAllIssues([...$options, ...compact('limit', 'offset')]);
         $pages = generatePagination($totalPages, $currentPage);
 
-        return compact('issues', 'pages', 'currentPage', 'totalPages');
+        $user = Session::get('user');
+        $userRole = $user['role'];
+        $isAdmin = $userRole === 'ADMIN';
+        return compact('issues', 'pages', 'currentPage', 'totalPages', 'isAdmin');
     }
 
 
@@ -189,7 +199,7 @@ class IssueController extends \Core\Controller
     public function issueView()
     {
         $issueId = Router::getRouteParams('issueId');
-        $issue =  $this->issueService->getIssueById($issueId);
+        $issue = $this->issueService->getIssueById($issueId);
         if (!$issue) return $this->issueNotFound();
 
         if (!$this->authorizeUser($issue)) {
@@ -313,5 +323,32 @@ class IssueController extends \Core\Controller
         $this->issueService->deleteIssue($issueId);
 
         Router::redirectTo('/issues');
+    }
+
+    /**
+     * Handles the download of deleted issue logs.
+     *
+     * Method: GET
+     * Path: '/issues/delete-logs/download'
+     * Description: Downloads a CSV file containing the logs of deleted issues.
+     *              Only accessible by users with the 'ADMIN' role.
+     *
+     * @return void
+     */
+    public function downloadDeleteLog()
+    {
+        $user = Session::get('user');
+        $role = $user['role'];
+
+        if ($role !== 'ADMIN') Router::redirectTo('/');
+
+        $deletedIssueLogs = $this->issueService->getDeletedIssueLogs();
+        $fileName = date('Y_m_d') . '.csv';
+        $this->issueService->writeToCSVFile($fileName, $deletedIssueLogs);
+
+        header("Content-type: text/csv");
+        header("Content-Disposition: attachment; filename=$fileName");
+        readfile($fileName);
+        unlink($fileName);
     }
 }
