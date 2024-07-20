@@ -284,7 +284,8 @@ class IssueService
                 $query .= "created_at $order";
         }
 
-        $query .= " LIMIT :limit OFFSET :offset";
+        if (isset($options['limit']) && isset($options['offset']))
+            $query .= " LIMIT :limit OFFSET :offset";
 
         return $query;
     }
@@ -328,6 +329,13 @@ class IssueService
             $types['end'] = PDO::PARAM_STR;
         }
 
+        if (isset($options['limit']) && isset($options['offset'])) {
+            $params['limit'] = $options['limit'];
+            $types['limit'] = PDO::PARAM_INT;
+            $params['offset'] = $options['offset'];
+            $types['offset'] = PDO::PARAM_INT;
+        }
+
         return [
             'params' => $params,
             'types' => $types,
@@ -351,13 +359,9 @@ class IssueService
         $params = [
             "id" => $user['id'],
             'role' => $user['role'],
-            "limit" => $options['limit'],
-            "offset" => $options['offset'],
             ...$paramsAndTypes['params']
         ];
         $types = [
-            "limit" => PDO::PARAM_INT,
-            "offset" => PDO::PARAM_INT,
             "id" => PDO::PARAM_INT,
             "role" => PDO::PARAM_STR,
             ...$paramsAndTypes['types']
@@ -566,7 +570,7 @@ class IssueService
         foreach ($data as $row) {
             if (!$isHeaderSet) {
                 fputcsv($file, array_keys($row));
-                $header = true;
+                $isHeaderSet = true;
             }
 
             fputcsv($file, array_values($row));
