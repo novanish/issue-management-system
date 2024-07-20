@@ -50,6 +50,7 @@ class App
         Router::delete('/issues/delete/:issueId', AppControllers\IssueController::class . "@deleteIssue");
 
         Router::get('/issues/delete-logs/download', AppControllers\IssueController::class . "@downloadDeleteLog");
+        Router::get('/issues/export-to-csv', AppControllers\IssueController::class . "@exportIssuesAsCSV");
 
         Router::get('*', AppControllers\ErrorsController::class . "@notFound");
     }
