@@ -37,7 +37,7 @@ class IssueController extends \Core\Controller
      *
      * @return array
      */
-    private function getIssuesData()
+    private function getIssuesData(bool $paginate = true): array
     {
         $options = Request::getQueryParameter([
             'orderBy',
@@ -48,6 +48,10 @@ class IssueController extends \Core\Controller
             'status',
             'priority'
         ]);
+
+        if (!$paginate) {
+            return $this->issueService->getAllIssues($options);
+        }
 
         $currentPage = Request::getQueryParameter('p');
         $currentPage = (int)$currentPage ?: 1;
@@ -313,7 +317,6 @@ class IssueController extends \Core\Controller
     public function deleteIssue()
     {
         $issueId = Router::getRouteParams('issueId');
-        $user = Session::get('user');
         $issue = $this->issueService->getIssueById($issueId);
         if (!$issue) return Router::redirectTo('/issues');
 
@@ -339,16 +342,35 @@ class IssueController extends \Core\Controller
     {
         $user = Session::get('user');
         $role = $user['role'];
-
         if ($role !== 'ADMIN') Router::redirectTo('/');
 
         $deletedIssueLogs = $this->issueService->getDeletedIssueLogs();
-        $fileName = date('Y_m_d') . '.csv';
-        $this->issueService->writeToCSVFile($fileName, $deletedIssueLogs);
+        $fileName = 'delete_logs_' . date('Y_m_d') . '.csv';
 
-        header("Content-type: text/csv");
+        header("Content-Type: text/csv");
         header("Content-Disposition: attachment; filename=$fileName");
-        readfile($fileName);
-        unlink($fileName);
+
+        $this->issueService->writeToCSVFile('php://output', $deletedIssueLogs);
+    }
+
+
+    /**
+     * Exports all issues as a CSV file.
+     *
+     * Method: GET
+     * Path: '/issues/export-to-csv'
+     * Description: Downloads a CSV file containing all issues.
+     *
+     * @return void
+     */
+    public function exportIssuesAsCSV()
+    {
+        $issues = $this->getIssuesData(paginate: false);
+        $fileName = 'issues_' . date('Y_m_d') . '.csv';
+
+        header("Content-Type: text/csv");
+        header("Content-Disposition: attachment; filename=$fileName");
+
+        $this->issueService->writeToCSVFile('php://output', $issues);
     }
 }
