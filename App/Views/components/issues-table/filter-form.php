@@ -35,5 +35,6 @@ use Core\Http\Request;
         <label for="end-date">End Date</label>
         <input type="date" name="end" id="end-date" class="input-field" value="<?= Request::getQueryParameter('end', '') ?>">
     </div>
-    <button type="submit" class="primary-btn">Filter</button>
+    <button type="submit" class="primary-btn" formaction="/issues">Filter</button>
+    <button type="submit" class="primary-btn" formaction="/issues/export-to-csv">Export to CSV</button>
 </form>
