@@ -119,11 +119,12 @@ function seedIssues(Database $database)
         $title = $issueTitles[$i];
         $description = $descriptions[$i];
         $assignee_id = rand(1, 0) || $i === 0 || $i === 1 ? null : $usersId[rand(0, $usersCount - 1)];
+        $isDeleted = rand(0, 1);
         $status = !$assignee_id ? IssueStatus::OPEN : (IssueStatus::getAllExcept(IssueStatus::RESOLVED))[rand(0, count(IssueStatus::getAllExcept(IssueStatus::RESOLVED)) - 1)];
         $priority = $i === 0 || $i === 1 ? IssuePriority::HIGH : (IssuePriority::getAll())[rand(0, count(IssuePriority::getAll()) - 1)];
         $reporter_id = $usersId[rand(0, $usersCount - 1)];
-        $issue = [$title, $description, $status, $priority, $assignee_id, $reporter_id, getRandomDate()];
-        $queryString = "INSERT INTO issues (title, description, status, priority, assignee_id, reporter_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)";
+        $issue = [$title, $description, $status, $priority, $assignee_id, $reporter_id, getRandomDate(), $isDeleted];
+        $queryString = "INSERT INTO issues (title, description, status, priority, assignee_id, reporter_id, created_at, is_deleted) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         $database->query($queryString, $issue);
     }
 }
